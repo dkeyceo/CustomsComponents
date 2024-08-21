@@ -1,0 +1,208 @@
+﻿@using System.Data
+
+<style>
+  .grid-search_tb {
+    width: 100%;
+    background-color: #e6ecef;
+    border-style: none;
+    outline: none;
+  }
+
+  .grid-icon-column {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+</style>
+@if (!HideTitle)
+{
+  <div class="row my-2 text-center">
+    <div class="col-lg-12 col-md-12 col-sm-12 col-12">
+      <h1>@((MarkupString)(Title))</h1>
+    </div>
+  </div>
+}
+@if (BeforeHeader != null)
+{
+  @BeforeHeader
+}
+@if (!HideHeader)
+{
+  <div>
+    @if (OnAdd != null)
+    {
+      @if (AddButtonList == null)
+      {
+        <RadzenButton Style="padding-left: 0em !important;" Icon="add_circle" Text="Створити новий документ" Click=@(args => AddSplitButtonClick(null)) />
+      }
+      else
+      {
+        <RadzenSplitButton Style="padding-left: 0em !important;" Icon="add_circle" Text="Створити новий документ" Click=@(args => AddSplitButtonClick(args))>
+          <ChildContent>
+              <style>
+              .rz-menuitem-text
+              {
+                  color:inherit;
+              }
+              </style>
+            @foreach (var item2 in AddButtonList)
+            {
+							<RadzenSplitButtonItem 
+              Icon="@(!string.IsNullOrEmpty(@item2.Icon) ? item2.Icon : "")" 
+              Text="@item2.Caption" 
+              Value="@item2.Value" 
+              IconColor="@item2.IconColor"
+              Style="@("color:"+(!string.IsNullOrEmpty(@item2.ButtonColor) ? item2.ButtonColor+"!important" : ""))" />
+            }
+          </ChildContent>
+        </RadzenSplitButton>
+      }
+    }
+    @if (AddButtonLine != null)
+    {
+      @AddButtonLine
+    }
+  </div>
+}
+@if (AfterHeader != null)
+{
+  @AfterHeader
+}
+@if (!HideSearch)
+{
+  <RadzenFieldset Text="Критерії пошуку" Icon="search" AllowCollapse="true">
+    <div>
+      @FindsCriteria
+    </div>
+    <div class="row mt-3">
+      <div class="col-lg-4 col-md-4 col-sm-12 col-12 d-flex justify-content-start my-1">
+        <RadzenButton Icon="search" Click="Find" Text="Шукати" ButtonType="ButtonType.Submit" Disabled="searching" />
+        <RadzenButton Icon="clear_all" ButtonStyle="ButtonStyle.Light" Text="Очистити" title="Очистити умови пошуку" Style="margin-left:10px" Click="ClearFind" />
+      </div>
+      <div class="col-lg-4 col-md-4 col-sm-12 col-12 d-flex justify-content-md-center my-md-1 my-2">
+        @if (DataSource != null)
+        {
+          <SearchResultsCount TextBefore="Знайдено" Count="DataSource.Count()" TextAfter="запис|записи|записів" />
+          @if (AddingFoundText != null)
+          {
+            @AddingFoundText
+          }
+        }
+      </div>
+      <div class="col-lg-4 col-md-4 col-sm-12 col-12 d-flex justify-content-md-end my-1">
+        <RadzenButton Icon="save_alt" Click="PrintToExcel" Disabled="DataSource==null || DataSource.Count() ==0 || Columns==null" Text="Завантажити список в Excel" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Secondary" />
+      </div>
+    </div>
+  </RadzenFieldset>
+}
+<div class="mt-2">
+  @if (Grid != null)
+  {
+    @Grid
+  }
+  else
+  {
+    @if (DataSource != null)
+    {
+      <RadzenGrid Data="DataSource.AsEnumerable()" TItem="DataRow" AllowPaging="true" PagerPosition=PagerPosition.TopAndBottom
+                  PageSize="100" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" RowRender="(args)=>RowRender(args)"
+                  EmptyText="Записів не знайдено" ExpandMode="DataGridExpandMode.Single" @ref="grid">
+        <Template Context="row">
+          @if (Expand != null)
+          {
+            @Expand(row)
+          }
+        </Template>
+        <Columns>
+          @if (Columns != null)
+          {
+            @foreach (var item in Columns)
+            {
+              @if (item.IsIconColumn)
+              {
+                <RadzenGridColumn Title="@item.Caption" TItem="DataRow" Context="row" Width="@item.Width" CssClass="grid-icon-column">
+                  <Template>
+                    @foreach (var icon in GetRowIcons(row))
+                    {
+                      <RadzenIcon Icon="@icon.icon" title="@icon.title" />
+                    }
+                  </Template>
+                </RadzenGridColumn>
+              }
+              else if (item.IsBtnColumn)
+              {
+                <RadzenGridColumn TItem="DataRow" Context="row" Width="@item.Width">
+                  <Template>
+                    @if (IsAnyButtonVisible(row, item))
+                    {
+                      <RadzenSplitButton Icon="settings" Title="Дії" Click=@(args => ChangeStatus(row, args)) AlwaysOpenPopup=item.BtnColumnAlwaysOpenPopup>
+                        <ChildContent>
+                          <RadzenSplitButtonItem Icon="done" Text="Оформити" Visible="@(row[item.StatusColumn].ToString() == item.ValueStatusVisible.Split(",")[0])" Value="R" />
+                          <RadzenSplitButtonItem Icon="cancel" Text="Анулювати" Visible="@(row[item.StatusColumn].ToString() == item.ValueStatusVisible.Split(",")[1])" Value="N" />
+                          <RadzenSplitButtonItem Icon="cancel" Text="Відмовити" Visible="@(row[item.StatusColumn].ToString() == item.ValueStatusVisible.Split(",")[2])" Value="F" />
+                          @if (item.AddingButtonList != null)
+                          {
+                            foreach (var item2 in item.AddingButtonList)
+                            {
+                              <RadzenSplitButtonItem Icon="@(!string.IsNullOrEmpty(@item2.Icon) ? item2.Icon : "")" Text="@item2.Caption" Visible="@(item2.Visible!=null ? item2.Visible(row) : (row[item.StatusColumn].ToString() == item2.StatusVisible))" Value="@item2.Value" />
+                            }
+                          }
+                          <RadzenSplitButtonItem Icon="app_registration" Text="Протокол дій" Visible="ProtButtonVisible" Value="Prot" />
+                        </ChildContent>
+                      </RadzenSplitButton>
+                    }
+                  </Template>
+                </RadzenGridColumn>
+              }
+              else if (item.Link4Open != null)
+              {
+                <RadzenGridColumn Title="@item.Caption" TItem="DataRow" Context="row" Width="@item.Width">
+                  <Template>
+                    <RadzenLink @onclick="@(() => OnEditCurrent(row, item.Link4Open))" Path="javascript:void(0);" Text="@(item.TextGetter != null ? @item.TextGetter(row) : @row[item.ColName].ToString())" />
+                  </Template>
+                </RadzenGridColumn>
+              }
+              else
+              {
+                <RadzenGridColumn Title="@item.Caption" TItem="DataRow" Context="row" Width="@item.Width">
+                  <Template>
+                    @if (item.LinkColumnIdentifier == null)
+                    {
+                      <span title="@GetTitle(item,row)">
+                      @if (item.TextGetter != null)
+                      {
+                        @((MarkupString)item.TextGetter(row))
+                      }
+                      else if (!row.IsNull(item.ColName))
+                      {
+                        @ObjToString(@row[item.ColName])
+                      }
+                      </span>
+                    }
+                    else
+                    {
+                      <a title="@GetTitle(item,row)" href="javascript:void(0);" @onclick="@(async () => await ClickCell(row, item.LinkColumnIdentifier))">
+                        @if (item.TextGetter != null)
+                        {
+                          @((MarkupString)item.TextGetter(row))
+                        }
+                        else if (!row.IsNull(item.ColName))
+                        {
+                          @ObjToString(@row[item.ColName])
+                        }
+                      </a>
+                    }
+                  </Template>
+                </RadzenGridColumn>
+              }
+            }
+          }
+        </Columns>
+      </RadzenGrid>
+    }
+  }
+</div>
+@if (Footer != null)
+{
+  @Footer
+}

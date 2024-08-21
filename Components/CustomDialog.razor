@@ -1,0 +1,273 @@
+﻿@using System.ComponentModel
+@using CustomsComponents.Services
+
+@inject CustomDialogService CustomDialogService
+@implements IDisposable
+
+<style>
+  .customdialog-modal-backdrop {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: #000;
+    opacity: 0.5;
+  }
+
+  .customdialog-modal-wrapper {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 1;
+    overflow: auto;
+  }
+
+  .customdialog-modal {
+    position: relative;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 6px;
+    background-color: #fff;
+    box-shadow: 0 3px 9px rgba(0,0,0,.5);
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .customdialog-modal-content {
+    padding: 1rem;
+    overflow: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .customdialog-modal-titlebar {
+    background-color: rgba(243, 245, 247, 0.56);
+    padding: 1rem;
+    font-size: 1.25rem;
+    line-height: 1.875rem;
+    user-select: none;
+  }
+
+  .customdialog-modal-buttons {
+    padding: 1rem;
+    display: flex;
+    flex-direction: row;
+  }
+</style>
+
+@if (Dialogs.Count != 0)
+{
+  <style>
+    body {
+      overflow: hidden !important;
+    }
+  </style>
+}
+
+@{
+  var dialogTop = Dialogs.LastOrDefault();
+}
+@foreach (var dialog in Dialogs)
+{
+  <CustomDialogView @key=dialog Dialog="dialog" OnTop="dialog==dialogTop" />
+}
+
+
+@code {
+
+  protected List<CustomDialog.Dialog> Dialogs { get; set; } = new List<CustomDialog.Dialog>();
+
+  protected override void OnInitialized()
+  {
+    CustomDialogService.DialogUpdateEvent += Update;
+    CustomDialogService.Update();
+    base.OnInitialized();
+  }
+
+  // protected async Task Update(IEnumerable<CustomDialog.Dialog> dialogs)
+  // {
+  //   await this.InvokeAsync(() =>
+  //   {
+  //     Dialogs = dialogs?.ToList() ?? new List<Dialog>();
+  //     StateHasChanged();
+  //   });
+
+  // }
+
+  protected void Update(IEnumerable<CustomDialog.Dialog> dialogs)
+  {
+    Dialogs = dialogs?.ToList() ?? new List<Dialog>();
+    StateHasChanged();
+  }
+
+  public void Dispose()
+  {
+    CustomDialogService.DialogUpdateEvent -= Update;
+  }
+
+  public delegate void ChangeButtonDisabledState(bool isDisabled);
+
+  public interface IInfoDialog
+  {
+    public Task<dynamic> getResultAsync(CancelEventArgs e);
+  }
+
+  public interface IConfirmDialog
+  {
+    public Task<dynamic> getResultOnAcceptAsync(CancelEventArgs e);
+    public Task<dynamic> getResultOnCancelAsync(CancelEventArgs e);
+  }
+
+  public interface IConfirmWithCancelDialog
+  {
+    public Task<dynamic> getResultOnYesAsync(CancelEventArgs e);
+    public Task<dynamic> getResultOnNoAsync(CancelEventArgs e);
+    public Task<dynamic> getResultOnCancelAsync(CancelEventArgs e);
+  }
+
+  public class ConfirmDialogResult
+  {
+    public bool IsAccepted { get; set; }
+    public dynamic Result { get; set; }
+  }
+
+  public class ConfirmWithCancelDialogResult
+  {
+    public bool? IsAccepted { get; set; }
+    public dynamic Result { get; set; }
+  }
+
+  public class DialogOptions
+  {
+    public DialogOptions()
+    {
+      Draggable = true;
+      Resizable = true;
+      ShowTitle = true;
+      ShowClose = true;
+    }
+
+    public bool Draggable { get; set; }
+    public bool Resizable { get; set; }
+    public bool ShowTitle { get; set; }
+    public bool ShowClose { get; set; }
+    public string Left { get; set; }
+    public string Top { get; set; }
+    public string Bottom { get; set; }
+    public string Width { get; set; }
+    public string Height { get; set; }
+    public string InfoButtonText { get; set; }
+    public string AcceptButtonText { get; set; }
+    public string CancelButtonText { get; set; }
+    public string ThirdButtonText { get; set; }
+  }
+
+  public class ConfirmWithCancelOptions
+  {
+    public ConfirmWithCancelOptions()
+    {
+    }
+
+    public string YesButtonText { get; set; }
+    public string NoButtonText { get; set; }
+    public string CancelButtonText { get; set; }
+    public bool ShowExclamationMark { get; set; } = false;
+  }
+
+  public class ConfirmOptions
+  {
+    public ConfirmOptions()
+    {
+    }
+
+    public string OkButtonText { get; set; }
+    public string CancelButtonText { get; set; }
+    public bool ShowExclamationMark { get; set; } = false;
+  }
+
+  public class PromtOptions
+  {
+    public PromtOptions()
+    {
+    }
+    public string OkButtonText { get; set; }
+    public string CancelButtonText { get; set; }
+    public bool AllowEmpty { get; set; } = false;
+    public string InitialText { get; set; } = null;
+    public int MaxLength { get; set; } = Int32.MaxValue;
+    public int Lines { get; set; } = 0;
+    public string Placeholder { get; set; }
+  }
+
+  public class InfoOptions
+  {
+    public InfoOptions()
+    {
+    }
+
+    public string OkButtonText { get; set; }
+    public bool ShowExclamationMark { get; set; } = false;
+  }
+
+  public class Dialog
+  {
+    private CustomDialogService DialogService { get; set; }
+
+    public Dialog(CustomDialogService dialogService)
+    {
+      DialogService = dialogService;
+    }
+
+    public DialogType Type { get; set; }
+    public string Title { get; set; }
+    public RenderFragment RenderFragment { get; set; }
+    public object Component { get; set; }
+    public DialogOptions Options { get; set; }
+    public TaskCompletionSource<dynamic> Task { get; set; }
+
+    public void Close(dynamic result = null)
+    {
+      DialogService.CloseDialog(this, result);
+    }
+
+    public void CloseException(Exception exception)
+    {
+      DialogService.CloseDialogException(this, exception);
+    }
+  }
+
+  public enum DialogType
+  {
+    SIMPLE, INFO, CONFIRM, CONFIRM_WITH_CANCEL
+  }
+
+  public class DialogHandler
+  {
+    public DialogHandler(CustomDialogService dialogService, Dialog dialog, Task<dynamic> task)
+    {
+      DialogService = dialogService;
+      Dialog = dialog;
+      Task = task;
+    }
+
+    private CustomDialogService DialogService { get; set; }
+    private Dialog Dialog { get; set; }
+    private Task<dynamic> Task { get; set; }
+
+    public void Close(dynamic result = null)
+    {
+      DialogService.CloseDialog(this.Dialog, result);
+    }
+
+    public async Task<dynamic> GetResultAsync()
+    {
+      return await Task;
+    }
+  }
+
+}

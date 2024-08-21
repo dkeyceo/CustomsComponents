@@ -1,0 +1,48 @@
+﻿@using System.ComponentModel
+@using CustomsComponents.Common
+@implements CustomDialog.IConfirmDialog
+@inject MessageBox MessageBox
+
+@inherits CustomDialogBase
+
+<RadzenLabel Text="@Message"/>
+<RadzenTextArea @bind-Value="InitialText"
+                Placeholder="@(Placeholder ?? (AllowEmpty ? "" : "Обов'язкове поле"))"
+                Style="width:100%;" MaxLength="MaxLength" Rows="Lines" />
+
+@code {
+
+  [Parameter]
+  public string Message { get; set; }
+
+  [Parameter]
+  public bool AllowEmpty { get; set; }
+
+  [Parameter]
+  public string InitialText { get; set; }
+
+  [Parameter]
+  public int MaxLength { get; set; } = Int32.MaxValue;
+
+  [Parameter]
+  public int Lines { get; set; } = 3;
+
+  [Parameter]
+  public string Placeholder { get; set; }
+
+  public Task<dynamic> getResultOnAcceptAsync(CancelEventArgs e)
+    {
+        if (!AllowEmpty && string.IsNullOrEmpty(InitialText))
+        {
+            e.Cancel = true;
+            MessageBox.ErrorInfoLight("Обов'язкове поле");
+            return Task.FromResult<dynamic>(null);
+        }
+        return Task.FromResult<dynamic>(InitialText ?? "");
+    }
+
+    public Task<dynamic> getResultOnCancelAsync(CancelEventArgs e)
+    {
+        return Task.FromResult<dynamic>(null);
+    }
+}

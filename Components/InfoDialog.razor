@@ -1,0 +1,60 @@
+﻿@using System.ComponentModel
+@using CustomsComponents.Common
+
+@inherits CustomDialogBase
+
+@implements CustomDialog.IInfoDialog
+@implements CustomDialog.IConfirmDialog
+@implements CustomDialog.IConfirmWithCancelDialog
+
+@if (ShowExclamationMark)
+{
+    <div class="d-flex flex-row ">
+        <div class="text-danger">
+            <RadzenIcon Icon="warning" />
+        </div>
+        <strong class="ml-2">
+          <TextLineBreak Text="@Message" />
+        </strong>
+    </div>
+}
+else
+{
+  <TextLineBreak Text="@Message" />
+}
+
+
+
+@code {
+
+    [Parameter]
+    public string Message { get; set; }
+
+    [Parameter]
+    public bool ShowExclamationMark { get; set; }
+
+    public Task<dynamic> getResultAsync(CancelEventArgs e)
+    {
+        return Task.FromResult<dynamic>(null);
+    }
+
+    public Task<dynamic> getResultOnAcceptAsync(CancelEventArgs e)
+    {
+        return Task.FromResult<dynamic>(null);
+    }
+
+    public Task<dynamic> getResultOnCancelAsync(CancelEventArgs e)
+    {
+        return Task.FromResult<dynamic>(null);
+    }
+
+    public Task<dynamic> getResultOnYesAsync(CancelEventArgs e)
+    {
+        return Task.FromResult<dynamic>(null);
+    }
+
+    public Task<dynamic> getResultOnNoAsync(CancelEventArgs e)
+    {
+        return Task.FromResult<dynamic>(null);
+    }
+}
